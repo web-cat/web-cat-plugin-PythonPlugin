@@ -1,0 +1,39 @@
+<project name="PythonPlugin" default="export.jar" basedir=".">
+
+  <!-- Load any optional build configuration options from the user's
+       local properties file. -->
+  <property file="${user.home}/build.properties"/>
+
+  <target name="init"
+    depends="updatePropertiesFile"
+    description="Set the build date in the Properties file.">
+    <tstamp/>
+    <propertyfile file="Properties"
+      comment="This file is automatically rewritten by ANT, so all formatting will be trashed.">
+      <entry key="version.date" value="${DSTAMP}"/>
+    </propertyfile>
+  </target>
+
+  <target name="updatePropertiesFile" if="webcat.plugin.tools.dir"
+	description="Extract metadata from plug-in's config.plist file and place it into Properties file.
+  	    This step is optional, and is only executed if the user has the appropriate perl support
+  	    installed, as indicated in their personal ~/build.properties file.  If you don't have
+  	    this support, you can update your Properties file manually instead.">
+	<tstamp/>
+	<exec executable="perl" failonerror="true">
+	  <arg file="${webcat.plugin.tools.dir}/PlistToProperties.pl"/>
+	  <arg value="src/config.plist"/>
+	  <arg value="Properties"/>
+	  <env key="PERLLIB" path="${webcat.perl.lib.dir}"/>
+	</exec>
+  </target>
+
+  <target name="export.jar"
+    depends="init"
+    description="Build a distributable jar file for this plug-in">
+    <property file="Properties"/>
+    <jar destfile="../../${ant.project.name}_${version.major}.${version.minor}.${version.revision}.jar"
+            basedir="src"/>
+  </target>
+
+</project>
