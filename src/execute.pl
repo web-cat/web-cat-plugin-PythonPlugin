@@ -22,8 +22,7 @@ use Web_CAT::FeedbackGenerator;
 use Web_CAT::Utilities
     qw( confirmExists filePattern copyHere htmlEscape addReportFile scanTo
         scanThrough linesFromFile );
-use Web_CAT::PyUnitResultsReader;
- 
+
 my @beautifierIgnoreFiles = ( '.py' );
 
 
@@ -69,7 +68,7 @@ our $reportCount  = $cfg->getProperty( 'numReports', 0  );
 our $maxCorrectnessScore     = $cfg->getProperty( 'max.score.correctness', 0 );
 our $maxToolScore            = $cfg->getProperty( 'max.score.tools', 0 );
 our $enableStudentTests      = $cfg->getProperty( 'enableStudentTests', 0 );
-our $doStudentTests          = 
+our $doStudentTests          =
     ( $enableStudentTests      =~ m/^(true|on|yes|y|1)$/i );
 our $measureCodeCoverage     = $cfg->getProperty( 'coverageMetric', 0 );
 our $doMeasureCodeCoverage   =
@@ -93,14 +92,14 @@ our $submissionTimestamp     = $cfg->getProperty( 'submissionTimestamp', 0 );
 #   Adjust time from milliseconds to seconds
     $dueDateTimestamp    /= 1000;
     $submissionTimestamp /= 1000;
-#   Within extra feedback blackout period if 
+#   Within extra feedback blackout period if
 #   (1) hideHintsWithin != 0 (covered by multiplication below), and
-#   (2) submission time >= (due date - hideHintsWithin time) 
+#   (2) submission time >= (due date - hideHintsWithin time)
 #   else will provide extra feedback if requested.
 #   The reason for the extra variable is to be able to generate a message
 #   to the effect that extra help would have been available if the student
 #   had submitted earlier.
-our $extraFeedbackBlackout   = 
+our $extraFeedbackBlackout   =
     int ($submissionTimestamp + $hideHintsWithin * 3600 * 24 >= $dueDateTimestamp);
 #   Turn extra feedback off within extra feedback blackout period.
     $showExtraFeedback       = $showExtraFeedback && !$extraFeedbackBlackout;
@@ -148,7 +147,7 @@ our $student_output           = "$log_dir/$student_output_relative";
 our $student_rpt_relative     = "student-unittest-report.html";
 our $student_rpt              = "$log_dir/$student_rpt_relative";
 
-# Will append a "-moduleName.txt" to each file. Doesn't exactly 
+# Will append a "-moduleName.txt" to each file. Doesn't exactly
 # follow approach of other report files, but seemed better this way.
 our $coverage_output_relative = "student-coverage";
 our $coverage_output          = "$log_dir/$coverage_output_relative";
@@ -197,14 +196,14 @@ debug                   = $debug
 #-----------------------------
 #   Python interpreter to use
 #   Std linux: Improve portability later. Do some minimal testing.
-#   Set a default, then check environment for python location. 
+#   Set a default, then check environment for python location.
 #   Die if can't find an executable.
 #-----------------------------
 my $python_interp  = "/usr/bin/python";
 #  If PYTHON_HOME is set and meaningful, switch to use it.
 if ( defined( $ENV{'PYTHON_HOME'} ) && $ENV{'PYTHON_HOME'} ne "" )
 {
-   $python_interp  = $ENV{'PYTHON_HOME'} 
+   $python_interp  = $ENV{'PYTHON_HOME'}
 }
 -x $python_interp || die "$python_interp doesn't exist";
 
@@ -229,7 +228,7 @@ my $scriptData = $cfg->getProperty( 'scriptData', '.' );
 $scriptData =~ s,/$,,;
 
 ## Should be renamed to "generateFullScriptPath"?
-## 
+##
 sub findScriptPath
 {
     my $subpath = shift;
@@ -268,7 +267,7 @@ chdir( $working_dir );
 print "working dir set to $working_dir\n" if $debug;
 
 #   Try to deduce whether or not there is an extra level of subdirs
-#   around this assignment. 
+#   around this assignment.
 #   FIXME: This may not be needed for Python.
 {
     # Get a listing of all file/dir names, including those starting with
@@ -353,7 +352,7 @@ sub studentLog
 #=============================================================================
 # Temporarily comment out. The instructor's test program finds the student's
 # implementation, so don't need this.
-if(0) 
+if(0)
 {
     my @sources = (<*.py>);
     if ( $#sources < 0 || ! -f $sources[0] )
@@ -415,7 +414,7 @@ show_details = $show_details
     # Build an array of unit tester files.
     my $testScript = $unitTesterDir;
 
-    if ( -f $testScript ) 
+    if ( -f $testScript )
     {
 	push( @testScripts, $testScript );
     }
@@ -441,15 +440,15 @@ show_details = $show_details
 	print RESULT_REPORT "TEST START: Processing $testModuleName\n";
 	close( RESULT_REPORT );
 	#$num_cases++;
-	#print "Running the $script script.\n";    
-    
+	#print "Running the $script script.\n";
+
 	my $cmdline = "$Web_CAT::Utilities::SHELL"
 	    . "$python_interp $script 2>>$outfile";
 
 	# Exec program and collect output
-	my ( $exitcode, $timeout_status ) = 
+	my ( $exitcode, $timeout_status ) =
 	     Proc::Background::timeout_system( $timeout, $cmdline );
-	
+
 	$exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
 	# FIXME: Python sets the exit code to 1 if pyunit has any failed cases.
 	# Not good! But, this is a hack to get past that for now.
@@ -461,7 +460,7 @@ show_details = $show_details
 	die "Cannot open file for input '$outfile': $!";
 
 	if ( $timeout_status )
-	{   
+	{
 	    if ( $@ )
 	    {
 		# timed out
@@ -529,7 +528,7 @@ EOF
 	    $unitTesterOutput .= $_ . "Stopping test.\n";
 	    $can_proceed = 0;
 	}
-	while ( length( $_ ) > 78  &&  $_ =~ m/^[.EF]+$/o && 
+	while ( length( $_ ) > 78  &&  $_ =~ m/^[.EF]+$/o &&
                 !( $_ =~ m/ERROR|FAILURE/o ) )
 	{
 	    $unitTesterOutput .= substr( $_, 0, 78 ) . "\n";
@@ -547,8 +546,8 @@ EOF
 	    # $1 should be the module being tested
 	    if( $1 ne "" ) {
                 my $moduleName = $1;
-                $moduleName =~ s,(.+)tests.py,$1,; 
-		$unitTesterOutput .= "\nTesting module '" . 
+                $moduleName =~ s,(.+)tests.py,$1,;
+		$unitTesterOutput .= "\nTesting module '" .
                                             $moduleName . "'\n";
 	    }
 	}
@@ -643,10 +642,10 @@ EOF
 	? $succeeded/($num_cases*1.0)
 	: 0;
 
-# FIXME: It might be a good idea to get this working instead of 
+# FIXME: It might be a good idea to get this working instead of
 #     continuing with how it do it in major block above?
 # Try faking Web_CAT::JUnitResultsReader results for instructor
-# Web_CAT::PyUnitResultsReader -> 
+# Web_CAT::PyUnitResultsReader ->
 #     new( hasResults, testsExecuted, allTestsPass, testsFailed )
 #
 #$status{'instrTestResults'} = Web_CAT::PyUnitResultsReader->
@@ -658,7 +657,7 @@ EOF
     if ( $testsExecuted == 0 )
     {
 	# This used to say "no tests submitted". That might be true, but
-	# it is more likely that the student messed up. 
+	# it is more likely that the student messed up.
 	# Be vague and sort of blame them.  :-)
         $sectionTitle .=
             "<b class=\"warn\">(No Testable Files Found!)</b>";
@@ -669,9 +668,9 @@ EOF
     }
     else
     {
-        my $studentCasesPercent = 
-	        $allTestsPass ? 
-		100 : 
+        my $studentCasesPercent =
+	        $allTestsPass ?
+		100 :
 		sprintf( "%.1f", $eval_score * 100 );
         $sectionTitle .= "<b class=\"warn\">($studentCasesPercent%)</b>";
     }
@@ -680,9 +679,9 @@ EOF
     # Fire up the feedback generator
     my $feedbackGenerator = new Web_CAT::FeedbackGenerator( $resultReport );
 
-    # startFeedbackSection( title, report number, 
+    # startFeedbackSection( title, report number,
     #     initially collapsed (1) or expanded (0) )
-    $feedbackGenerator->startFeedbackSection( 
+    $feedbackGenerator->startFeedbackSection(
              $sectionTitle,
              ++$expSectionId,
              1 );
@@ -700,15 +699,15 @@ EOF
     # suppressed at the point when it would normally have been produced.
     # Don't have to do anything extra here, other than inform student of
     # their misfortune.
-    if ( $extraFeedbackBlackout && ! $allTestsPass ) 
+    if ( $extraFeedbackBlackout && ! $allTestsPass )
     {
-           $feedbackGenerator->print( 
+           $feedbackGenerator->print(
 	     "<p>Your instructor has choosen to cut off extra feedback "
 	     . "$hideHintsWithin day(s) before the due date. Consequently, "
 	     . "no extra feedback will be given.</p>\n"
 	   );
     }
-    # FIXME: Do we hide details if all tests pass? 
+    # FIXME: Do we hide details if all tests pass?
     # If all is well, why report? On the other hand, students may be happy
     # to see details of passing tests, even if there are few details.
     # Currently choosing not to report if all is well.
@@ -721,7 +720,7 @@ EOF
     $feedbackGenerator->endFeedbackSection;
 
     # Close down this report
-    $feedbackGenerator->close; 
+    $feedbackGenerator->close;
     $reportCount++;
     $cfg->setProperty( "report${reportCount}.file",     $resultReportRelative );
     $cfg->setProperty( "report${reportCount}.mimeType", "text/html"       );
@@ -767,7 +766,7 @@ sub run_coverage
     # Hash structure is hash of arrays.
     # Index is tested file name (e.g., "book.py".
     # Referenced array is ( moduleName, stmts, stmtsExec ).
-    my %coveredFiles;     
+    my %coveredFiles;
     my $coveredFileCount = 0;
     foreach( @allScripts ) {
 	if ( m/(.*)tests?\.py/i ) {              # It is a test script
@@ -779,7 +778,7 @@ push( @testedScripts2, $fileName );
 	    # E.g., "book.py" => ( "book", 0 stmts, 0 stmtsExec )
 	    $coveredFiles{$fileName} = [ $moduleName, 0, 0 ];
 	    $coveredFileCount++;    # Don't know if still needed.
-	} 
+	}
     }
 
     print "Testing contents of testedScripts array.\n";
@@ -792,7 +791,7 @@ push( @testedScripts2, $fileName );
 
     # How to process test coverage:
     #
-    # "coverage -x ${file}test.py" to create the '.coverage' file in 
+    # "coverage -x ${file}test.py" to create the '.coverage' file in
     #    current dir.
     #
     # "coverage -r ${file}.py" to report on the coverage for $file.
@@ -801,7 +800,7 @@ push( @testedScripts2, $fileName );
     #    -----------------------------
     #    library      17     16    94%
     #
-    # "coverage -a ${file}.py" to generate the annotated coverage 
+    # "coverage -a ${file}.py" to generate the annotated coverage
     #    document for $file in output name "${file}.py,coverage".
     #    "-d DIRECTORY" lets you specify the destination directory.
     #    E.g., "coverage -a library.py" generates "library.py,coverage".
@@ -811,16 +810,16 @@ push( @testedScripts2, $fileName );
 
     #----------------------------
     # First run unit test scripts to generate statistics.
-    # Coverage 2.85 appears to want the scripts to be executed 
+    # Coverage 2.85 appears to want the scripts to be executed
     # one at a time. So loop through them.
     foreach( @unitTestScripts ) {
         my $cmdline = "$Web_CAT::Utilities::SHELL"
 	. "$coverage_exe -x $_ 2>>$log_dir/coverage_stats_gen.txt";
 
 	# Exec program and collect output
-	my ( $exitcode, $timeout_status ) = 
+	my ( $exitcode, $timeout_status ) =
 	     Proc::Background::timeout_system( $timeout, $cmdline );
-	
+
 	# FIXME: See run_tests for details about exit code problems.
 	$exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
 	die "Exec died: $cmdline" if ( $exitcode < 0 || $exitcode > 1 );
@@ -835,7 +834,7 @@ push( @testedScripts2, $fileName );
     my $coverageOutput = "";
     my $coverageScore  = 0;
 
-    foreach( @testedScripts ) 
+    foreach( @testedScripts )
     {
 	my $file = $_;
 	my $testedModuleName = $coveredFiles{$file}[0];
@@ -844,9 +843,9 @@ push( @testedScripts2, $fileName );
 	   . "$coverage_exe -r $file >> $resultsFile";
 
 	# Exec program and collect output
-	my ( $exitcode, $timeout_status ) = 
+	my ( $exitcode, $timeout_status ) =
 	     Proc::Background::timeout_system( $timeout, $cmdline );
-	
+
 	# FIXME: See run_tests for details about exit code problems.
 	$exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
 	die "Exec died: $cmdline" if ( $exitcode < 0 || $exitcode > 1 );
@@ -897,9 +896,9 @@ foreach( @testedScripts2 ) {
     {
         $sectionTitle .= "<b class=\"warn\">($coverageScore%)</b>";
     }
-    # startFeedbackSection( title, report number, 
+    # startFeedbackSection( title, report number,
     #     initially collapsed (1) or expanded (0) )
-    $feedbackGenerator->startFeedbackSection( 
+    $feedbackGenerator->startFeedbackSection(
              $sectionTitle,
              ++$expSectionId,
              1 );
@@ -911,9 +910,9 @@ foreach( @testedScripts2 ) {
 		     . " for $coverageScore% coverage.<br/ >\n" );
     # FIXME: Have a choice about whether to not show coverage of statements
     # if within extra feedback blackout period.
-    if ( $coverageScore != 100 && $extraFeedbackBlackout ) 
+    if ( $coverageScore != 100 && $extraFeedbackBlackout )
     {
-           $feedbackGenerator->print( 
+           $feedbackGenerator->print(
 	     "<p>Your instructor has choosen to cut off extra feedback "
 	     . "$hideHintsWithin day(s) before the due date. Consequently, "
 	     . "you will not be shown which lines are not being tested by "
@@ -943,10 +942,10 @@ foreach( @testedScripts2 ) {
 	    {
                 $annotatedLines .= "module '"
 		    . $coveredFiles{$file}[0] . "' has "
-		    . $coveredFiles{$file}[2] . "/" 
-		    . $coveredFiles{$file}[1] . " executable lines covered (" 
+		    . $coveredFiles{$file}[2] . "/"
+		    . $coveredFiles{$file}[1] . " executable lines covered ("
 		    . sprintf("%.1f", $coveredFiles{$file}[2] * 100.0 /
-		                      $coveredFiles{$file}[1]) 
+		                      $coveredFiles{$file}[1])
 		    . "%)\n";
 		if( $showExtraFeedback )
 		{
@@ -954,9 +953,9 @@ print "showExtraFeedback is turned on.\n";
 		    my $cmdline = "$Web_CAT::Utilities::SHELL"
 		       . "$coverage_exe -d $log_dir -a $file";
 		    # Exec program and collect output
-		    my ( $exitcode, $timeout_status ) = 
+		    my ( $exitcode, $timeout_status ) =
 			  Proc::Background::timeout_system( $timeout, $cmdline );
-		    
+
 		    # FIXME: See run_tests for details about exit code problems.
 		    $exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
 		    die "Exec died: $cmdline" if ( $exitcode < 0 || $exitcode > 1 );
@@ -990,7 +989,7 @@ print "showExtraFeedback is turned on.\n";
     $feedbackGenerator->endFeedbackSection;
 
     # Close down this report
-    $feedbackGenerator->close; 
+    $feedbackGenerator->close;
     $reportCount++;
     $cfg->setProperty( "report${reportCount}.file",     $cov_rpt_relative );
     $cfg->setProperty( "report${reportCount}.mimeType", "text/html"       );
@@ -1004,7 +1003,7 @@ print "showExtraFeedback is turned on.\n";
 #=============================================================================
 sub explain_results
 {
-    my $doStudentTests          = shift; 
+    my $doStudentTests          = shift;
     my $doMeasureCodeCoverage   = shift;
     my $allStudentTestsMustPass = shift;
     my $totalScore              = shift;
@@ -1012,15 +1011,15 @@ sub explain_results
     my $codeCoveragePercent     = shift;
     my $instructorCasesPercent  = shift;
     my $maxCorrectnessScore     = shift;
-    
+
     $totalScore = int( $totalScore * 10 + 0.5 ) / 10;
     $studentCasesPercent = int( $studentCasesPercent * 10 + 0.5 ) / 10;
     $codeCoveragePercent = int( $codeCoveragePercent * 10 + 0.5 ) / 10;
     $instructorCasesPercent = int( $instructorCasesPercent * 10 + 0.5 ) / 10;
     my $possible = int( $maxCorrectnessScore * 10 + 0.5 ) / 10;
-    my $mustNotReportAllTests = 
-       int( $allStudentTestsMustPass && $studentCasesPercent < 99.99 ); 
-    my $feedbackGenerator = 
+    my $mustNotReportAllTests =
+       int( $allStudentTestsMustPass && $studentCasesPercent < 99.99 );
+    my $feedbackGenerator =
        new Web_CAT::FeedbackGenerator( $explain_rpt );
     $feedbackGenerator->startFeedbackSection(
         "Interpreting Your Correctness/Testing Score "
@@ -1055,7 +1054,7 @@ sub explain_results
     }
     if( $mustNotReportAllTests )
     {
-        $feedbackStr .= 
+        $feedbackStr .=
 	  "<tr><td><b>No other tests attempted</b></td>\n"
 	  . "<td class=\"n\">0%</td></tr>\n";
         $feedbackStr2 .= " * 0%";
@@ -1067,7 +1066,7 @@ sub explain_results
 	. "<td class=\"n\">$instructorCasesPercent%</td></tr>\n";
 	$feedbackStr2 .= " * $instructorCasesPercent%";
     }
-    $feedbackStr2 .= 
+    $feedbackStr2 .=
         " * $maxCorrectnessScore points possible =\n"
 	. "$totalScore</td></tr></table>\n"
 	. "<p>Full-precision (unrounded) percentages are used to calculate "
@@ -1075,7 +1074,7 @@ sub explain_results
     $feedbackGenerator->print( $feedbackStr  );
     $feedbackGenerator->print( $feedbackStr2 );
     $feedbackGenerator->endFeedbackSection;
-    $feedbackGenerator->close; 
+    $feedbackGenerator->close;
     $reportCount++;
     $cfg->setProperty( "report${reportCount}.file",     $explain_rpt_relative );
     $cfg->setProperty( "report${reportCount}.mimeType", "text/html"       );
@@ -1099,7 +1098,7 @@ my $cmd = "$python_interp";
 #    $resultReport  absolute place to put the HTML report
 #    $resultReportRelative  relative name to output the HTML report
 #    $show_details  whether or not to show details -- Equal to $debug?
-#                   maybe how much detail to show in report. 
+#                   maybe how much detail to show in report.
 #                   currently not using it, but could easily enough.
 
 my $score = 1.0;
@@ -1118,8 +1117,8 @@ if( $doStudentTests ){
 			  "Results From Running Your Tests",
 			  $stdinInput,
 			  $student_output,
-			  $student_rpt, 
-			  $student_rpt_relative, 
+			  $student_rpt,
+			  $student_rpt_relative,
 			  1 );
     if ( !$timeout_occurred )
     {
@@ -1142,10 +1141,10 @@ if( $doStudentTests ){
 # (3) $allStudentTestsMustPass is false, or all student tests have passed.
 if ( $can_proceed &&
      $doMeasureCodeCoverage &&
-     $doStudentTests && 
+     $doStudentTests &&
      (! $allStudentTestsMustPass || $stu_eval[0] > 0.9999 ) )
 {
-    $coverageResults = run_coverage( 
+    $coverageResults = run_coverage(
            $coverage_output_relative,
            $coverage_output,
            $coverage_rpt_relative,
@@ -1156,8 +1155,8 @@ if ( $can_proceed &&
 
 # To run the instructor tests, need to meet one of the following conditions:
 # (1) Only doing instructor tests ($doStudentTests == false), OR
-# (2) Can proceed and 
-#    (a) not requiring that all students tests must pass, or 
+# (2) Can proceed and
+#    (a) not requiring that all students tests must pass, or
 #    (b) they did pass.
 # Run if student results not required, or if required but good enough.
 if (( ! $doStudentTests ) ||
@@ -1170,8 +1169,8 @@ if (( ! $doStudentTests ) ||
 			      "Results From Running Your Instructor's Tests",
 			      $stdinInput,
 			      $instr_output,
-			      $instr_rpt, 
-			      $instr_rpt_relative, 
+			      $instr_rpt,
+			      $instr_rpt_relative,
 			      1 );
     if ( !$timeout_occurred )
     {
@@ -1204,7 +1203,7 @@ if( (! $allStudentTestsMustPass && $score > 0.01) || ($stu_eval[0] > 0.9999) )
 
 if ( $can_proceed && $doStudentTests )
 {
-    explain_results( $doStudentTests, 
+    explain_results( $doStudentTests,
                      $doMeasureCodeCoverage,
 		     $allStudentTestsMustPass,
 		     $score * 100.0,
