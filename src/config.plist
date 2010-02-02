@@ -2,14 +2,14 @@
     name             = PythonPlugin;
     version.major    = 0;
     version.minor    = 9;
-    version.revision = 1;
-    version.date     = 20090227;
+    version.revision = 8;
+    version.date     = 20090424;
     requires         = ( PerlForPlugins );
     provider         = "Virginia Tech Computer Science";
     provider.url     = "http://web-cat.cs.vt.edu/updates";
     license          = "GNU Affero General Public License v.3";
     license.url      = "http://www.gnu.org/copyleft/agpl.html";
-    copyright        = "(c) 2006-2009 Virginia Tech Department of Computer Science";
+    copyright        = "(c) 2009-2010 Virginia Tech Department of Computer Science";
     info.url         = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin";
     history.url      = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory";
     executable = execute.pl;
@@ -17,9 +17,9 @@
     author     = "Stefan Brandle (sbrandle@cse.taylor.edu)";
     authorUid  = sbrandle;
     languages  = ( { name = "Python"; version = "Python 2.5.2"; } );
-    description = "This is the stable version of the Python execution 
-script. It is designed to execute the student program and a reference implementation
-against a set of student tests.";
+    description = "This Python execution script is designed to execute the
+student program against a set of student-provided tests and also against a
+set of instructor-provided tests (reference tests).";
     timeoutMultiplier = 2;
     timeoutInternalPadding = 400;
     assignmentOptions = (
@@ -27,13 +27,13 @@ against a set of student tests.";
             property    = instructorUnitTest;
             type        = fileOrDir;
             fileTypes   = ( py );
-            name        = "Instructor Unit Test Implementation";
+            name        = "Instructor Reference Tests";
             description =
   "Python unit tester[s] (file or directory of files) for testing the submitted
   classes. If you select a directory, it should contain pyunit test
-  classes, all of which will be used. This should be ASCII '.py' only, not compiled
-  '.pyc' files. The required convention is that to test a module named 'mod', the 
-  tester be named 'modtests.py'.";
+  classes, all of which will be used. These should be ASCII \".py\" only, not
+  compiled \".pyc\" files. The required convention is that to test a module
+  named \"mod\", the tester be named \"modtests.py\".";
         },
         {
             property    = localFiles;
@@ -44,8 +44,8 @@ against a set of student tests.";
   directory when running his/her tests and when running reference tests.  The
   file you select (or the entire contents of the directory you select) will be
   copied into the current working directory during grading so that
-  student-written and instructor-written test cases can read and/or write to
-  the file(s).  The default is to copy no files.";
+  student-written and instructor-written test cases can read from and/or
+  write to the file(s).  The default is to copy no files.";
         }
     );
     optionCategories = (
@@ -56,16 +56,31 @@ against a set of student tests.";
     );
     options = (
         {
+            property    = showHints;
+            type        = boolean;
+            default     = true;
+            name        = "Show Hints";
+            category    = "Feedback Settings";
+            description =
+  "Hints: Shows the students extra feedback from the scripts, such
+  as which tests passed and failed, as well as the assert messages from failed
+  tests. Choosing good messages, such as 'getX() does not return the correct
+  value' is important. The default assert messages are something like
+  'getX() != 2', which is definitely not helpful and may encourage students to
+  hard-code values to pass the test.  Enabling hints is likely to be very useful
+  for beginning students, but might be counterproductive for more advanced
+  students.";
+        },
+        {
             property    = hintsLimit;
-	    disable     = false;
+            disable     = false;
             type        = integer;
             default     = 3;
             name        = "Hints Limit";
             category    = "Feedback Settings";
             description =
-  "CURRENTLY IGNORED: Maximum number of hints the student will receive from 
-  failed reference tests. Have not worked through how to annotate hints in
-  Python. The active alternative is to set 'showExtraFeedback'.";
+  "Maximum number of hints the student will receive from
+  failed reference tests.";
         },
         {
             property    = hideHintsWithin;
@@ -73,7 +88,7 @@ against a set of student tests.";
             disable     = false;
             type        = integer;
             default     = 0;
-            name        = "Hide Hints";
+            name        = "Hide Hints (Hints Blackout Period)";
             category    = "Feedback Settings";
             description =
   "Suppress all hints from failed reference tests for submissions within this
@@ -86,15 +101,11 @@ against a set of student tests.";
             default     = false;
             name        = "Show Extra Feedback";
             category    = "Feedback Settings";
-            description = 
-  "Similar to hints: Shows the students extra feedback from the scripts, such 
-  as which tests passed and failed, as well as the assert messages from failed 
-  tests. Choosing good messages, such as 'getX() does not return the correct 
-  value' is important. The default assert messages are something like 
-  'getX() != 2', which is definitely not helpful and may encourage students to
-  hard-code values to pass the test.  This feature is likely to be very useful
-  for beginning students, but might be counterproductive for more advanced 
-  students.";
+            description =
+  "Currently a synonym for 'Show Hints': This will be repurposed after May 2009
+  to control whether to show specific information about failed tests.
+  Currently synonym for 'Show Hints' so as not to break deployed assignments
+  that expect the option to be available and have that meaning.";
         },
         {
             property    = enableStudentTests;
@@ -105,7 +116,7 @@ against a set of student tests.";
             description =
   "Enabling this option activates the student test option. That means that
   students must submit their own tests. Disabled, this option supports non-TDD
-  testing with instructor tests. Enabled, this activates student TDD mode.";
+  testing using only instructor tests. Enabled, this activates student TDD mode.";
         },
         {
             property    = allStudentTestsMustPass;
@@ -120,7 +131,8 @@ against a set of student tests.";
   assessment feedback unless all student tests pass. If this option is not
   set, then students may continue to proceed even if some student-written
   tests fail. The student's correctness/testing score is multiplied by the
-  proportion of their tests that pass. Should also set 'enableStudentTests'.";
+  proportion of their tests that pass. Should also set
+  \"Student Unit Tests Enabled/Required\".";
         },
         {
             property    = coverageMetric;
@@ -129,11 +141,12 @@ against a set of student tests.";
             name        = "Measure Student Test Coverage";
             default     = false;
             category    = "Scoring Settings";
-            description = 
+            description =
   "This activates/deactivates student-written test coverage metrics. This is
   currently running in a very simple mode that does methods + conditions and
   decisions executed. To be meaningful, student unit test submission must be
-  active. Should also set 'enableStudentTests'.";
+  active. Should also set
+  \"Student Unit Tests Enabled/Required\".";
         },
         {
             property    = debug;
