@@ -14,16 +14,17 @@ use File::Basename;
 use File::Copy;
 use File::stat;
 use Proc::Background;
-#use Web_CAT::Beautifier;    ## Soon, I hope. -sb
+use Web_CAT::Beautifier;    ## Soon, I hope. -sb
 use Web_CAT::FeedbackGenerator;
 use Web_CAT::Utilities
-    qw( confirmExists filePattern copyHere htmlEscape addReportFile scanTo
-        scanThrough linesFromFile );
+    qw(confirmExists filePattern copyHere htmlEscape addReportFile scanTo
+       scanThrough linesFromFile addReportFileWithStyle);
 # PyUnitResultsReader: a hoped-for future development
 #use Web_CAT::PyUnitResultsReader;
 
-my @beautifierIgnoreFiles = ( '.py' );
+my @beautifierIgnoreFiles = ();
 
+use File::Spec;
 
 #=============================================================================
 # Bring command line args into local variables for easy reference
@@ -61,8 +62,6 @@ our $timeout      = $cfg->getProperty( 'timeout', 30    );
 # by the subsystem..
 if ( $timeout >  100 ) { $timeout = ($timeout - 400) / 2; }
 if ( $timeout <  2 ) { $timeout = 15; }
-
-our $reportCount  = $cfg->getProperty( 'numReports', 0  );
 
 #-------------------------------------------------------
 # Scoring Settings
@@ -146,39 +145,39 @@ our $NTprojdir               = $working_dir . "/";
 #-------------------------------------------------------
 if ( ! defined $log_dir )    { print "log_dir undefined"; }
 our $script_log_relative      = "script.log";
-our $script_log               = "$log_dir/$script_log_relative";
+our $script_log               = File::Spec->join($log_dir, $script_log_relative);
 if ( ! defined $script_log ) { print "script_log undefined"; }
 our $student_code_relative    = "student-code.txt";
-our $student_code             = "$log_dir/$student_code_relative";
+our $student_code             = File::Spec->join($log_dir, $student_code_relative);
 
 our $instr_output_relative    = "instructor-unittest-out.txt";
-our $instr_output             = "$log_dir/$instr_output_relative";
+our $instr_output             = File::Spec->join($log_dir, $instr_output_relative);
 our $instr_rpt_relative       = "instr-unittest-report.html";
-our $instr_rpt                = "$log_dir/$instr_rpt_relative";
+our $instr_rpt                = File::Spec->join($log_dir, $instr_rpt_relative);
 
 our $student_output_relative  = "student-unittest-out.txt";
-our $student_output           = "$log_dir/$student_output_relative";
+our $student_output           = File::Spec->join($log_dir, $student_output_relative);
 our $student_rpt_relative     = "student-unittest-report.html";
-our $student_rpt              = "$log_dir/$student_rpt_relative";
+our $student_rpt              = File::Spec->join($log_dir, $student_rpt_relative);
 
 # Will append a "-moduleName.txt" to each file. Doesn't exactly
 # follow approach of other report files, but seemed better this way.
 our $coverage_output_relative = "student-coverage";
-our $coverage_output          = "$log_dir/$coverage_output_relative";
+our $coverage_output          = File::Spec->join($log_dir, $coverage_output_relative);
 our $coverage_rpt_relative    = "student-coverage-report.html";
-our $coverage_rpt             = "$log_dir/$coverage_rpt_relative";
+our $coverage_rpt             = File::Spec->join($log_dir, $coverage_rpt_relative);
 our $covfileRelative          = "test.cov";
 
 our $timeout_log_relative     = "timeout_log.txt";
-our $timeout_log              = "$log_dir/timeout_log";
-our $debug_log                = "$log_dir/debug.txt";
+our $timeout_log              = File::Spec->join($log_dir, 'timeout_log');
+our $debug_log                = File::Spec->join($log_dir, 'debug.txt');
 our $testLogRelative          = "justTesting.log";
-our $testLog                  = "$log_dir/$testLogRelative";
+our $testLog                  = File::Spec->join($log_dir, $testLogRelative);
 
 our $explain_rpt_relative     = "explanation_report.html";
-our $explain_rpt              = "$log_dir/$explain_rpt_relative";
+our $explain_rpt              = File::Spec->join($log_dir, $explain_rpt_relative);
 
-our $stdinInput               = '/dev/null';
+our $stdinInput               = File::Spec->devnull();
 
 #-------------------------------------------------------
 #   Other local variables within this script
@@ -197,22 +196,20 @@ our $expSectionId     = 0;    # For the expandable sections
 #   Set a default, then check environment for python location.
 #   Die if can't find an executable.
 #-----------------------------
-my $python_interp  = "/usr/bin/python";
-#  If PYTHON_HOME is set and meaningful, switch to use it.
-if ( defined( $ENV{'PYTHON_HOME'} ) && $ENV{'PYTHON_HOME'} ne "" )
-{
-   $python_interp  = $ENV{'PYTHON_HOME'}
-}
--x $python_interp || die "$python_interp doesn't exist";
+my $python_interp  = "python";
 
-#  If PYTHONPATH is not defined or is empty, set PYTHONPATH.
-my $python_path  = "$script_home:/usr/lib/python2.5:.";      # How to include correct srch path?
+#  Add script home to PYTHONPATH.
 if ( ! defined( $ENV{'PYTHONPATH'} ) || $ENV{'PYTHONPATH'} eq "" )
 {
-   $ENV{'PYTHONPATH'} = "${python_path}";
+   $ENV{'PYTHONPATH'} = $script_home . ":src";
+}
+else
+{
+   $ENV{'PYTHONPATH'} = $script_home . ":" . $ENV{'PYTHONPATH'} . ":src";
 }
 
-my $coverage_exe  = "$python_interp $script_home/coverage.py";        # Where coverage is
+# Where coverage is
+my $coverage_exe  = "$python_interp $script_home\\coverage.py";
 #   This is required by the python program 'coverage' to place results
 #   in more visible file location.
 $ENV{'COVERAGE_FILE'} = $covfileRelative;       # Specify output file name
@@ -230,8 +227,8 @@ $scriptData =~ s,/$,,;
 sub findScriptPath
 {
     my $subpath = shift;
-    my $target = "$scriptData/$subpath";
-    if ( -e $target )
+    my $target = File::Spec->join($scriptData, $subpath);
+    if (-e $target)
     {
     return $target;
     }
@@ -365,31 +362,33 @@ sub reportError {
     my $rpt_title         = shift;
     my $rpt_message       = shift;
 
-    my $errorFeedbackGenerator = new Web_CAT::FeedbackGenerator( $rpt_absolute_path );
+    my $errorFeedbackGenerator =
+        new Web_CAT::FeedbackGenerator( $rpt_absolute_path );
     $errorFeedbackGenerator->startFeedbackSection(
              $rpt_title,
              ++$expSectionId,
              0 );
-    if( ! defined $rpt_message || $rpt_message eq "" ) {
-    # No message passed in, so grab the script log.
-    # Don't know if this is good programming style, but about to 'slurp' entire file.
-    # Something really blew up, so printint everything in $script_log to screen report.
-    open( SCRIPT_LOG, "$script_log" ) ||
-        die "cannot open $script_log: $!";
-    my $holdTerminator = $/;
-    undef $/;
-    $rpt_message = <SCRIPT_LOG>;
-    close( SCRIPT_LOG );
-    $/ = $holdTerminator;
+    if( ! defined $rpt_message || $rpt_message eq "" )
+    {
+        # No message passed in, so grab the script log.
+        # Don't know if this is good programming style, but about to 'slurp'
+        # entire file.
+        # Something really blew up, so printint everything in $script_log
+        # to screen report.
+        open( SCRIPT_LOG, "$script_log" ) ||
+            die "cannot open $script_log: $!";
+        my $holdTerminator = $/;
+        undef $/;
+        $rpt_message = <SCRIPT_LOG>;
+        close( SCRIPT_LOG );
+        $/ = $holdTerminator;
     }
     $errorFeedbackGenerator->print( $rpt_message );
     $errorFeedbackGenerator->endFeedbackSection;
 
     # Close down this report
     $errorFeedbackGenerator->close;
-    $reportCount++;
-    $cfg->setProperty( "report${reportCount}.file",     $rpt_relative_path );
-    $cfg->setProperty( "report${reportCount}.mimeType", "text/html"        );
+    addReportFileWithStyle($cfg, $rpt_relative_path, 'text/html', 1);
 }
 
 
@@ -462,96 +461,106 @@ show_details = $show_details
     # Build an array of unit tester files.
     my $testScript = $unitTesterDir;
 
-    if ( -f $testScript ) {
-    push( @testScripts, $testScript );
+    if ( -f $testScript )
+    {
+        push( @testScripts, $testScript );
     }
-    elsif ( -d $testScript ) {
-    while (<${testScript}/*>) {
-        my $script = $_;
-        if( $script =~ /.*test[s]?.py$/i ) {
-            push( @testScripts, $script );
-        #@testScripts = <${testScript}/*tests.py>;
+    elsif ( -d $testScript )
+    {
+        while (<${testScript}/*>)
+        {
+            my $script = $_;
+            if ( $script =~ /.*test[s]?.py$/i )
+            {
+                push( @testScripts, $script );
+                #@testScripts = <${testScript}/*tests.py>;
+            }
         }
     }
-    }
-    if( $#testScripts < 0 || ! -f $testScripts[0] ) {
-    $can_proceed = 0;
-    reportError( $instr_rpt, $instr_rpt_relative, "Test Error Report",
-"<p><b class=\"warn\">Cannot identify a Python test script for your program.</b>"
-. "Please let your instructor know that something has gone wrong.</font></p>"
-. "<p>As a result, it is not possible to test your code.</p>"
-. "<p>Score = 0%.</p>");
-    return (0, 0, 1);
+    if ( $#testScripts < 0 || ! -f $testScripts[0] )
+    {
+        $can_proceed = 0;
+        reportError( $instr_rpt, $instr_rpt_relative, "Test Error Report",
+            "<p><b class=\"warn\">Cannot identify a Python test script for "
+            . "your program.</b>  Please let your instructor know that "
+            . "something has gone wrong.</font></p><p>As a result, it is "
+            . "not possible to test your code.</p><p>Score = 0%.</p>");
+        return (0, 0, 1);
     }
 
     my $hintsCount = 0;   # Track hints issued so that don't exceed $hintsLimit.
     my $noMoreHints = 0;  # Used to track that doing no more hints.
 
     ## START OF LOOP PROCESSING ALL UNIT TESTER FILES
-    foreach( @testScripts ) {
-    my $script = $_;
-    my $testModuleName = basename( $script );
-    my $moduleName = "";
-    # NOTE: Big assumption here. I am requiring that the test
-    # program name and the tested python module match based on the
-    # following rules:
-    # IF module file name = 'module.py'
-    # THEN test file name = 'moduletest[s]?.py'
-    # That enables much more helpful reporting of errors and is simpler
-    # to process. Feel free to comment on this approach.
-    if ( $testModuleName =~ m/(.+)(test[s]?)\.py/i )
+    foreach( @testScripts )
+    {
+        my $script = $_;
+        my $testModuleName = basename( $script );
+        my $moduleName = "";
+        # NOTE: Big assumption here. I am requiring that the test
+        # program name and the tested python module match based on the
+        # following rules:
+        # IF module file name = 'module.py'
+        # THEN test file name = 'moduletest[s]?.py'
+        # That enables much more helpful reporting of errors and is simpler
+        # to process. Feel free to comment on this approach.
+        if ( $testModuleName =~ m/(.+)(test[s]?)\.py/i )
         {
-        $moduleName = $1 . ".py";
-    }
-    # Log that we're starting to process a specific test script
-    open( RESULT_REPORT, ">>$outfile" ) ||
-        die "cannot open '$outfile'";
-    print RESULT_REPORT "TEST START: Processing $testModuleName\n";
-    close( RESULT_REPORT );
-    #$num_cases++;
-    #print "Running the $script script.\n";
+            $moduleName = $1 . ".py";
+        }
+        # Log that we're starting to process a specific test script
+         open( RESULT_REPORT, ">>$outfile" ) ||
+            die "cannot open '$outfile'";
+        print RESULT_REPORT "TEST START: Processing $testModuleName\n";
+        close( RESULT_REPORT );
+        #$num_cases++;
+        #print "Running the $script script.\n";
 
-    my $cmdline = "$Web_CAT::Utilities::SHELL"
-        . "$python_interp '$script' 2>>'$outfile'";
+        my $cmdline = "$Web_CAT::Utilities::SHELL"
+            . "$python_interp \"$script\" > \"$outfile\"  2>&1";
 
-    # Exec program and collect output
-    my ( $exitcode, $timeout_status ) =
-         Proc::Background::timeout_system( $timeout, $cmdline );
+        print "cmdline = ", $cmdline, "\n" if ($debug);
 
-    $exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
-    # FIXME: Python sets the exit code to 1 if pyunit has any failed cases.
-    # Not good! But, this is a hack to get past that for now.
-    # Will need a better solution to to decide whether exec blew up.
-    # Could possibly check $outfile to distinguish between the two cases.
-    die "Exec died: $cmdline" if ( $exitcode < 0 || $exitcode > 1 );
+        # Exec program and collect output
+        my ( $exitcode, $timeout_status ) =
+            Proc::Background::timeout_system( $timeout, $cmdline );
+
+        $exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
+        # FIXME: Python sets the exit code to 1 if pyunit has any failed cases.
+        # Not good! But, this is a hack to get past that for now.
+        # Will need a better solution to to decide whether exec blew up.
+        # Could possibly check $outfile to distinguish between the two cases.
+        die "Exec died: $cmdline" if ( $exitcode < 0 || $exitcode > 1 );
 
         open( TEST_OUTPUT, "$outfile" ) ||
-    die "Cannot open file for input '$outfile': $!";
+            die "Cannot open file for input '$outfile': $!";
 
-    if ( $timeout_status )
-    {
-        ## Note: $@ appears to be shorthand for $EVAL_ERROR. It is used to
-        ## look for trap messages and such within an eval block. It is probably
-        ## a remnant from early execute.pl code. Commenting out for now.
-        #if ( $@ )
-        #{
-        # timed out
-        $timeout_occurred = 1;
-        $can_proceed = 0;
-        adminLog("Script thinks that a timeout happened.\n" .
-             "Timeout value = $timeout\n");
+        if ( $timeout_status )
+        {
+            ## Note: $@ appears to be shorthand for $EVAL_ERROR. It is used to
+            ## look for trap messages and such within an eval block. It is probably
+            ## a remnant from early execute.pl code. Commenting out for now.
+            #if ( $@ )
+            #{
+            # timed out
+            $timeout_occurred = 1;
+            $can_proceed = 0;
+            adminLog("Script thinks that a timeout happened.\n" .
+                "Timeout value = $timeout\n");
 
-        reportError( $instr_rpt, $instr_rpt_relative, "Test Error Report",
-"<p><b class=\"warn\">Testing your solution exceeded the allowable time "
-. "limit for this assignment.</b></p>"
-. "<p>Most frequently, this is the result of <b>infinite recursion</b>--when "
-. "a recursive method fails to stop calling itself--or <b>infinite "
-. "looping</b>--when a while loop or for loop fails to stop repeating.</p>"
-. "<p>As a result, no time remained for further analysis of your code.</p>"
-. "<p>Score = 0%.</p>\n Please fix the errors and submit when correct.\n" );
-        return (0, 0, 1);
-        #}
-    }
+            reportError( $instr_rpt, $instr_rpt_relative, "Test Error Report",
+                "<p><b class=\"warn\">Testing your solution exceeded the "
+                . "allowable time limit for this assignment.</b></p>"
+                . "<p>Most frequently, this is the result of <b>infinite "
+                . "recursion</b>--when a recursive method fails to stop "
+                . "calling itself--or <b>infinite looping</b>--when a while "
+                . "loop or for loop fails to stop repeating.</p><p>As a "
+                . "result, no time remained for further analysis of your "
+                . "code.</p><p>Score = 0%.</p>\n Please fix the errors and "
+                . "submit when correct.\n" );
+            return (0, 0, 1);
+            #}
+        }
 
     } ## END OF LOOP PROCESSING ALL UNIT TESTER FILES
       ## Output from all unit testers was appended to the same file, "$outfile".
@@ -853,9 +862,7 @@ show_details = $show_details
 
     # Close down this report
     $feedbackGenerator->close;
-    $reportCount++;
-    $cfg->setProperty( "report${reportCount}.file",     $resultReportRelative );
-    $cfg->setProperty( "report${reportCount}.mimeType", "text/html"       );
+    addReportFileWithStyle($cfg, $resultReportRelative, 'text/html', 1);
 
 adminLog("Return values from processing are: \n
 eval_score = $eval_score,
@@ -1136,9 +1143,7 @@ print "showHints is turned on.\n";
 
     # Close down this report
     $feedbackGenerator->close;
-    $reportCount++;
-    $cfg->setProperty( "report${reportCount}.file",     $cov_rpt_relative );
-    $cfg->setProperty( "report${reportCount}.mimeType", "text/html"       );
+    addReportFileWithStyle($cfg, $cov_rpt_relative, 'text/html', 1);
 
     # Normalize into 0-1 range.
     return $coverageScore / 100.0;
@@ -1221,9 +1226,7 @@ sub explain_results
     $feedbackGenerator->print( $feedbackStr2 );
     $feedbackGenerator->endFeedbackSection;
     $feedbackGenerator->close;
-    $reportCount++;
-    $cfg->setProperty( "report${reportCount}.file",     $explain_rpt_relative );
-    $cfg->setProperty( "report${reportCount}.mimeType", "text/html"       );
+    addReportFileWithStyle($cfg, $explain_rpt_relative, 'text/html', 1);
 }
 
 #=============================================================================
@@ -1359,10 +1362,19 @@ if ( $can_proceed && $doStudentTests )
              $maxCorrectnessScore );
 }
 
+
+#=============================================================================
+# generate HTML versions of any other source files
+#=============================================================================
+
+my $beautifier = new Web_CAT::Beautifier;
+$beautifier->beautifyCwd( $cfg, \@beautifierIgnoreFiles );
+
+
+
+#=============================================================================
 # Scale to be out of range of $maxCorrectnessScore
 $cfg->setProperty( "score.correctness", $score* $maxCorrectnessScore );
-$cfg->setProperty( "numReports",      $reportCount );
-adminLog("reportCount = " . $reportCount . "\n" );
 $cfg->save();
 
 if ( $debug )
