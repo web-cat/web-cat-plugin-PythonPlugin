@@ -2,14 +2,14 @@
     name             = PythonPlugin;
     version.major    = 0;
     version.minor    = 9;
-    version.revision = 8;
-    version.date     = 20090424;
+    version.revision = 10;
+    version.date     = 20120128;
     requires         = ( PerlForPlugins );
     provider         = "Virginia Tech Computer Science";
     provider.url     = "http://web-cat.cs.vt.edu/updates";
     license          = "GNU Affero General Public License v.3";
     license.url      = "http://www.gnu.org/copyleft/agpl.html";
-    copyright        = "(c) 2009-2010 Virginia Tech Department of Computer Science";
+    copyright        = "(c) 2009-2011 Virginia Tech Department of Computer Science";
     info.url         = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin";
     history.url      = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory";
     executable = execute.pl;
@@ -55,6 +55,17 @@ set of instructor-provided tests (reference tests).";
         "Script Developer"
     );
     options = (
+        {
+            property    = useJES;
+            type        = boolean;
+            default     = false;
+            name        = "Use Jython";
+            category    = "Python Settings";
+            description =
+  "Choose to use the plug-in's built-in Jython v2.2.1 distribution (from JES,
+  and including media computation support), rather than the server's native
+  python installation.";
+        },
         {
             property    = showHints;
             type        = boolean;
