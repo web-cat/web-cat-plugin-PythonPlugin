@@ -9,7 +9,7 @@
     provider.url     = "http://web-cat.cs.vt.edu/updates";
     license          = "GNU Affero General Public License v.3";
     license.url      = "http://www.gnu.org/copyleft/agpl.html";
-    copyright        = "(c) 2009-2011 Virginia Tech Department of Computer Science";
+    copyright        = "(c) 2009-2012 Virginia Tech Department of Computer Science";
     info.url         = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin";
     history.url      = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory";
     executable = execute.pl;
