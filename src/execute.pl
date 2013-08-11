@@ -364,6 +364,7 @@ while (<*>)
         }
         $workingDir .= "/$dir";
         chdir($workingDir);
+        print "working dir set to $workingDir\n" if $debug;
     }
 }
 
@@ -385,6 +386,7 @@ while (<*>)
         else
         {
             print "localFiles is a single file\n" if $debug;
+            $lf =~ tr/\\/\//;
             my $base = $lf;
             $base =~ s,/[^/]*$,,;
             copyHere($lf, $base, \@beautifierIgnoreFiles);
@@ -591,7 +593,8 @@ show_details = $show_details
         # Not good! But, this is a hack to get past that for now.
         # Will need a better solution to to decide whether exec blew up.
         # Could possibly check $outfile to distinguish between the two cases.
-        die "Exec died: $cmdline" if ($exitcode < 0 || $exitcode > 1);
+
+        # die "Exec died: $cmdline" if ($exitcode < 0 || $exitcode > 1);
 
         open(TEST_OUTPUT, "$outfile") ||
             die "Cannot open file for input '$outfile': $!";
