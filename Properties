@@ -1,22 +1,26 @@
 #This file is automatically rewritten by ANT.  Hand-edits may be lost.
-#Sat Jan 28 17:55:52 EST 2012
-timeoutMultiplier=2
-version.minor=9
-copyright="(c) 2009-2012 Virginia Tech Department of Computer Science"
-requires=( PerlForPlugins )
-license.url="http\://www.gnu.org/copyleft/agpl.html"
-author="Stefan Brandle (sbrandle@cse.taylor.edu)"
-executable=execute.pl
-license="GNU Affero General Public License v.3"
-info.url="http\://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin"
-interpreter.prefix="${PerlForPlugins.perl.exe}"
-languages=( { name \= "Python"; version \= "Python 2.5.2"; } )
-version.major=0
-version.date=20120128
-history.url="http\://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory"
-timeoutInternalPadding=400
-provider="Virginia Tech Computer Science"
-authorUid=sbrandle
-provider.url="http\://web-cat.cs.vt.edu/updates"
-version.revision=10
+#Tue, 04 Mar 2014 11:49:26 -0500
+# Automatically generated configuration file
+#
+# Tue Mar  4 11:49:26 2014
+
 name=PythonPlugin
+version.major=0
+version.minor=9
+version.revision=12
+version.date=20140304
+requires=( PerlForPlugins )
+provider="Virginia Tech Computer Science"
+provider.url="http\://web-cat.cs.vt.edu/updates"
+license="GNU Affero General Public License v.3"
+license.url="http\://www.gnu.org/copyleft/agpl.html"
+copyright="(c) 2009-2014 Virginia Tech Department of Computer Science"
+info.url="http\://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin"
+history.url="http\://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory"
+executable=execute.pl
+interpreter.prefix="${PerlForPlugins.perl.exe}"
+author="Stefan Brandle (sbrandle@cse.taylor.edu)"
+authorUid=sbrandle
+languages=( { name \= "Python"; version \= "Python 3.3"; } )
+timeoutMultiplier=2
+timeoutInternalPadding=400

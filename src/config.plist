@@ -2,8 +2,8 @@
     name             = PythonPlugin;
     version.major    = 0;
     version.minor    = 9;
-    version.revision = 11;
-    version.date     = 20140128;
+    version.revision = 12;
+    version.date     = 20140304;
     requires         = ( PerlForPlugins );
     provider         = "Virginia Tech Computer Science";
     provider.url     = "http://web-cat.cs.vt.edu/updates";
@@ -170,6 +170,22 @@ set of instructor-provided tests (reference tests).";
   "Set to a non-zero value for the script to produce debugging output (the
   larger the number, the greater the detail, up to about 5).  Debugging output
   on each grading script run will be e-mailed to the instructor.";
+        }
+    );
+    globalOptions = (
+        {
+            property    = pythonCmd;
+            type        = shortText;
+            name        = "Python Interpreter Command";
+            default     = "python";
+            size = 20;
+            description =
+  "The name of the python interpreter to use.  The default is \"python\".  On
+  systems with multiple python interpreters installed, you can use this
+  to specify a specific command (such as \"python3.3\") in order to select
+  the desired version to use with plug-in native python execution.  The
+  plug-in requires that unittest already be installed in python's packages
+  (it comes as a built-in module in modern versions of python).";
         }
     );
 }

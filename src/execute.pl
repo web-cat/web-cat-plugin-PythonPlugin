@@ -203,7 +203,7 @@ our $expSectionId     = 0;    # For the expandable sections
 #   Set a default, then check environment for python location.
 #   Die if can't find an executable.
 #-----------------------------
-my $python_interp  = "python3.3";
+my $python_interp  = $cfg->getProperty('pythonCmd', 'python');
 
 if ($useJython)
 {
