@@ -2,21 +2,21 @@
     name             = PythonPlugin;
     version.major    = 0;
     version.minor    = 9;
-    version.revision = 10;
-    version.date     = 20120128;
+    version.revision = 11;
+    version.date     = 20140128;
     requires         = ( PerlForPlugins );
     provider         = "Virginia Tech Computer Science";
     provider.url     = "http://web-cat.cs.vt.edu/updates";
     license          = "GNU Affero General Public License v.3";
     license.url      = "http://www.gnu.org/copyleft/agpl.html";
-    copyright        = "(c) 2009-2012 Virginia Tech Department of Computer Science";
+    copyright        = "(c) 2009-2014 Virginia Tech Department of Computer Science";
     info.url         = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin";
     history.url      = "http://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory";
     executable = execute.pl;
     interpreter.prefix = "${PerlForPlugins.perl.exe}";
     author     = "Stefan Brandle (sbrandle@cse.taylor.edu)";
     authorUid  = sbrandle;
-    languages  = ( { name = "Python"; version = "Python 2.5.2"; } );
+    languages  = ( { name = "Python"; version = "Python 3.3"; } );
     description = "This Python execution script is designed to execute the
 student program against a set of student-provided tests and also against a
 set of instructor-provided tests (reference tests).";

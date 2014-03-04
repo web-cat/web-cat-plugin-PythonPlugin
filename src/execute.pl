@@ -203,7 +203,7 @@ our $expSectionId     = 0;    # For the expandable sections
 #   Set a default, then check environment for python location.
 #   Die if can't find an executable.
 #-----------------------------
-my $python_interp  = "python";
+my $python_interp  = "python3.3";
 
 if ($useJython)
 {
@@ -251,11 +251,11 @@ else
     #  Add script home to PYTHONPATH.
     if (! defined($ENV{'PYTHONPATH'}) || $ENV{'PYTHONPATH'} eq "")
     {
-       $ENV{'PYTHONPATH'} = $pluginHome . ":src";
+       $ENV{'PYTHONPATH'} = $pluginHome . ":.:src";
     }
     else
     {
-       $ENV{'PYTHONPATH'} = $pluginHome . ":" . $ENV{'PYTHONPATH'} . ":src";
+       $ENV{'PYTHONPATH'} = $pluginHome . ":" . $ENV{'PYTHONPATH'} . ":.:src";
     }
     if ($debug)
     {
