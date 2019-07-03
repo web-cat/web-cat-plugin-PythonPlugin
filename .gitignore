@@ -1,0 +1,4 @@
+testsetup
+testsetup/
+src/jes/
+src/python_plugin/*$py.class
