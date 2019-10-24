@@ -248,6 +248,12 @@ if ($useJython)
 }
 else
 {
+    my $cmdPath = $cfg->getProperty('pythonBinPath', '');
+    if ($cmdPath ne '')
+    {
+        $ENV{'PATH'} = $cmdPath . ':' . $ENV{'PATH'};
+    }
+
     #  Add script home to PYTHONPATH.
     if (! defined($ENV{'PYTHONPATH'}) || $ENV{'PYTHONPATH'} eq "")
     {

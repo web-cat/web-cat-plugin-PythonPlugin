@@ -1,22 +1,22 @@
 #This file is automatically rewritten by ANT.  Hand-edits may be lost.
-#Sat Mar 05 10:06:29 EST 2016
-version.minor=9
+#Wed Oct 23 22:15:39 GMT-05:00 2019
 timeoutMultiplier=2
-copyright="(c) 2009-2016 Virginia Tech Department of Computer Science"
+version.minor=9
+copyright="(c) 2009-2014 Virginia Tech Department of Computer Science"
 requires=( PerlForPlugins )
 license.url="http\://www.gnu.org/copyleft/agpl.html"
 author="Stefan Brandle (sbrandle@cse.taylor.edu)"
 executable=execute.pl
 license="GNU Affero General Public License v.3"
-info.url="http\://web-cat.org/WCWiki/PythonTddPlugin"
+info.url="http\://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin"
 interpreter.prefix="${PerlForPlugins.perl.exe}"
 languages=( { name \= "Python"; version \= "Python 3.3"; } )
 version.major=0
-version.date=20160305
-history.url="http\://web-cat.org/WCWiki/PythonTddPlugin/ChangeHistory"
+version.date=20191023
+history.url="http\://web-cat.cs.vt.edu/WCWiki/PythonTddPlugin/ChangeHistory"
 timeoutInternalPadding=400
 provider="Virginia Tech Computer Science"
 authorUid=sbrandle
-provider.url="http\://web-cat.org/updates"
-name=PythonPlugin
+provider.url="http\://web-cat.cs.vt.edu/updates"
 version.revision=13
+name=PythonPlugin

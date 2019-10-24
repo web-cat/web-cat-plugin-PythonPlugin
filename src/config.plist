@@ -2,8 +2,8 @@
     name             = PythonPlugin;
     version.major    = 0;
     version.minor    = 9;
-    version.revision = 12;
-    version.date     = 20140304;
+    version.revision = 13;
+    version.date     = 20191023;
     requires         = ( PerlForPlugins );
     provider         = "Virginia Tech Computer Science";
     provider.url     = "http://web-cat.cs.vt.edu/updates";
@@ -186,6 +186,16 @@ set of instructor-provided tests (reference tests).";
   the desired version to use with plug-in native python execution.  The
   plug-in requires that unittest already be installed in python's packages
   (it comes as a built-in module in modern versions of python).";
+        },
+        {
+            property    = pythonBinPath;
+            type        = shortText;
+            name        = "Command Path";
+            size = 20;
+            description =
+  "An optional directory (or path) to be prepended to the command path for
+  Python grading. This can be used to adjust which python installation is
+  in force when the python command is executed.";
         }
     );
 }
