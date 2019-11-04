@@ -792,25 +792,19 @@ show_details = $show_details
         elsif (m/^FAILED \(/o)
         {
             # "FAILED (failures=1, errors=2)"
-            if (m/\(failures=([0-9]+), errors=([0-9]+).*\)/o)
-            {
-                $failures += $1;
-                $errors   += $2;
-            }
             # "FAILED (failures=1)"
-            elsif (m/\(failures=([0-9]+)\)/o)
+            # "FAILED (errors=2)"
+            if (m/failures=([0-9]+)/o)
             {
                 $failures += $1;
             }
-            # "FAILED (errors=2)"
-            elsif (m/\(errors=([0-9]+)\)/o)
+            if (m/errors=([0-9]+)/o)
             {
                 $errors   += $1;
             }
-            else
+            if (m/skipped=([0-9]+)/o)
             {
-                die "Testing script died: pyunit FAILED. Report format "
-                    . "has changed!";
+                $errors   += $1;
             }
             $unitTesterOutput .= $_ . "\n";
         }
