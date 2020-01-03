@@ -26,6 +26,10 @@ use Web_CAT::Utilities
 my @beautifierIgnoreFiles = ();
 
 use File::Spec;
+use File::Find;
+use File::Path qw(make_path);
+#use File::Basename;
+
 
 #=============================================================================
 # Bring command line args into local variables for easy reference
@@ -69,6 +73,10 @@ if ($timeout <  2) { $timeout = 15; }
 #-------------------------------------------------------
 our $useJython = $cfg->getProperty('useJES', 0);
 $useJython = ($useJython =~ m/^(true|on|yes|y|1)$/i);
+
+#our $pluginPython = $cfg->getProperty('usePluginPython', 0);
+#$pluginPython = ($pluginPython =~ m/^(true|on|yes|y|1)$/i);
+
 
 #-------------------------------------------------------
 # Scoring Settings
@@ -120,7 +128,8 @@ our $submissionTimestamp     = $cfg->getProperty('submissionTimestamp', 0);
 #   to the effect that extra help would have been available if the student
 #   had submitted earlier.
 our $hintsBlackout   = int(
-    $submissionTimestamp + $hideHintsWithin * 3600 * 24 >= $dueDateTimestamp);
+    $submissionTimestamp + $hideHintsWithin * 3600 * 24 >= $dueDateTimestamp 
+    	&& $hideHintsWithin != 0);
 #   Turn extra feedback off within extra feedback blackout period.
     $showHints       = $showHints && !$hintsBlackout;
 
@@ -186,6 +195,14 @@ our $explain_rpt              = File::Spec->join($resultDir, $explain_rpt_relati
 
 our $stdinInput               = File::Spec->devnull();
 
+# images
+
+our $publicDir  = "$resultDir/public";
+our $imagesRelative    = "images";
+our $images            = "$publicDir/$imagesRelative";
+our $image_rpt_relative    = "student-image-report.html";
+our $image_rpt             = File::Spec->join($resultDir, $image_rpt_relative);
+
 #-------------------------------------------------------
 #   Other local variables within this script
 #-------------------------------------------------------
@@ -248,14 +265,53 @@ if ($useJython)
 }
 else
 {
+#	# remove this at some point, cannot do this since ld-linux-x86-64.so.2
+#	# cannot be changed with LD_LIBRARY_PATH
+#	if ($pluginPython)
+#	{
+#		$ENV{'PYTHONPATH'} = $pluginHome . "/python36:" .
+#			$pluginHome . "/python36/bin:" . $pluginHome . "/python36/lib64:" .
+#			$pluginHome . "/python36/lib";
+#		my $python_file = $pluginHome . "/python36/bin/python3.6";
+#		$python_interp = "LD_LIBRARY_PATH=$pluginHome/python36/lib64 " .
+#			$python_file;
+#		# ugly hack to allow python to be run
+#		my $chmodline = "$Web_CAT::Utilities::SHELL"
+#            . "chmod u+x $python_file";
+#
+#        print "chmodline = ", $chmodline, "\n" if ($debug);
+#
+#        # Exec program and collect output
+#        my ($exitcode, $timeout_status) =
+#            Proc::Background::timeout_system($timeout, $chmodline);
+#            
+#        $chmodline = "$Web_CAT::Utilities::SHELL"
+#            . "chmod u+x $pluginHome/python36/lib64/ld-linux-x86-64.so.2";
+#        print "chmodline = ", $chmodline, "\n" if ($debug);
+#
+#        # Exec program and collect output
+#        ($exitcode, $timeout_status) =
+#            Proc::Background::timeout_system($timeout, $chmodline);
+#		
+#	}
+	my $cmdPath = $cfg->getProperty('pythonBinPath', '');
+    if ($cmdPath ne '')
+    {
+        $ENV{'PATH'} = $cmdPath . ':' . $ENV{'PATH'};
+    }
+	
     #  Add script home to PYTHONPATH.
     if (! defined($ENV{'PYTHONPATH'}) || $ENV{'PYTHONPATH'} eq "")
     {
-       $ENV{'PYTHONPATH'} = $pluginHome . ":.:src";
+    # Modified to include the $pluginHome/libraries directory
+        $ENV{'PYTHONPATH'} = $pluginHome . ":.:src";
+#    	$ENV{'PYTHONPATH'} = $pluginHome . ":" . $pluginHome . "/libraries:.:src";
     }
     else
     {
-       $ENV{'PYTHONPATH'} = $pluginHome . ":" . $ENV{'PYTHONPATH'} . ":.:src";
+       # Modified to include the $pluginHome/libraries directory
+        $ENV{'PYTHONPATH'} = $pluginHome . ":" . $ENV{'PYTHONPATH'} . ":.:src";
+#    	$ENV{'PYTHONPATH'} = $pluginHome . ":" . $pluginHome . "/libraries:" . $ENV{'PYTHONPATH'} . ":.:src";
     }
     if ($debug)
     {
@@ -268,6 +324,9 @@ else
         print "PATH         = ",
             (defined $ENV{PATH} ? $ENV{PATH} : "[undefined]"),
             "\n";
+        print "PYTHON       = ",
+            (defined $python_interp ? $python_interp : "[undefined]"),
+            "\n";   
     }
 }
 
@@ -580,7 +639,7 @@ show_details = $show_details
         #print "Running the $script script.\n";
 
         my $cmdline = "$Web_CAT::Utilities::SHELL"
-            . "$python_interp \"$script\" > \"$outfile\"  2>&1";
+            . "$python_interp \"$script\" >> \"$outfile\"  2>&1";
 
         print "cmdline = ", $cmdline, "\n" if ($debug);
 
@@ -598,7 +657,8 @@ show_details = $show_details
 
         open(TEST_OUTPUT, "$outfile") ||
             die "Cannot open file for input '$outfile': $!";
-
+		close(TEST_OUTPUT);
+		
         if ($timeout_status)
         {
             ## Note: $@ appears to be shorthand for $EVAL_ERROR. It is used to
@@ -644,6 +704,11 @@ show_details = $show_details
                             # If so, python couldn't find a needed module.
     my $messages    = "";   # The collection of messages to output for a test.
     my $assertMsgs  = "";   # Output of assert messages
+    
+    my $expected_num_cases = 0;
+    my $expected_total_weight = 0;
+    my $found_failed_weight = 0;
+    my $was_weighted = 0; # False
 
     open(TEST_OUTPUT, "$outfile") ||
         die "Cannot open file for input '$outfile': $!";
@@ -678,6 +743,7 @@ show_details = $show_details
                 $unitTesterOutput .= "\nTesting module '" . $moduleName
                     . "' (file '$moduleName.py')\n";
             }
+            $was_weighted = 0; # Reset to False
         }
         # Syntax error: things blew up.
         # Should probably do something better with this.
@@ -704,7 +770,7 @@ show_details = $show_details
             ## itself.  If decide to stop, add below to $unitTesterOutput and
             ## uncomment the "$can_proceed = 0" stuff.
                 #. "Stopping test.\n";
-            #$can_proceed = 0;
+            # $can_proceed = 0;
         }
         # IOError: program tries to read a file that is not available. Could
         # be that student or instructor forgot to upload a file, or some
@@ -785,34 +851,58 @@ show_details = $show_details
         # perl die if pyunit's format changes; we need to know that right away.
         elsif (m/^FAILED \(/o)
         {
-            # "FAILED (failures=1, errors=2)"
-            if (m/\(failures=([0-9]+), errors=([0-9]+).*\)/o)
-            {
-                $failures += $1;
-                $errors   += $2;
-            }
+        	my $orig_failures = $failures;
+        	my $orig_errors = $errors;
+        	
+        	# "FAILED (failures=1, errors=2)"
             # "FAILED (failures=1)"
-            elsif (m/\(failures=([0-9]+)\)/o)
+            # "FAILED (errors=2)"
+            if (m/failures=([0-9]+)/o)
             {
                 $failures += $1;
             }
-            # "FAILED (errors=2)"
-            elsif (m/\(errors=([0-9]+)\)/o)
+            if (m/errors=([0-9]+)/o)
             {
                 $errors   += $1;
             }
-            else
+            if (m/skipped=([0-9]+)/o)
             {
-                die "Testing script died: pyunit FAILED. Report format "
-                    . "has changed!";
+                $errors   += $1;
             }
+            
+            if (not $was_weighted) {
+            	$found_failed_weight += ($errors - $orig_errors) 
+            		+ ($failures - $orig_failures);
+            }
+            
+#            # "FAILED (failures=1, errors=2)"
+#            if (m/\(failures=([0-9]+), errors=([0-9]+).*\)/o)
+#            {
+#                $failures += $1;
+#                $errors   += $2;
+#            }
+#            # "FAILED (failures=1)"
+#            elsif (m/\(failures=([0-9]+)\)/o)
+#            {
+#                $failures += $1;
+#            }
+#            # "FAILED (errors=2)"
+#            elsif (m/\(errors=([0-9]+)\)/o)
+#            {
+#                $errors   += $1;
+#            }
+#            else
+#            {
+#                die "Testing script died: pyunit FAILED. Report format "
+#                    . "has changed!";
+#            }
             $unitTesterOutput .= $_ . "\n";
         }
         # The happier alternative to "FAILED (....)" above.
         # "OK"
         elsif (m/^OK$/o)
         {
-            $unitTesterOutput .= $_ . "\n";
+            $unitTesterOutput .= $_ . "\n";   
         }
         # Pick up final report of number of cases run.
         # "Ran 1 test in 0.001s"
@@ -822,16 +912,43 @@ show_details = $show_details
             $num_cases += $1;
             $unitTesterOutput .= "------\n";
             $unitTesterOutput .= $_ . "\n";
+            
+            if (not $was_weighted) {
+            	$expected_num_cases += $1;
+            	$expected_total_weight += $1;
+            }
+        }
+        elsif (m/Running:\s*(\d+)\s*test\(s\) \(with a weight of (\d+)\)/o) {
+        	$expected_num_cases += $1; 
+        	$expected_total_weight += $2; 
+        	$was_weighted = 1;
+        }
+        elsif (m/Weighted Results: (\d+) out of (\d+)/o) {
+        	$found_failed_weight += $2 - $1;
         }
     }
 
     # Done processing test output
     close(TEST_OUTPUT);
+    
+    # TODO handle case where not everything ran for some reason
+    if ($num_cases != $expected_num_cases) {
+    	$num_cases = $expected_num_cases;
+    }
+
+#	if (not $can_proceed) {
+#		$num_cases = 0; # Don't give a parial score if not all files ran.
+#		$expected_total_weight = 0;
+#	}
 
     # Compute overall values
     my $succeeded = $num_cases - $failures - $errors;
-    my $eval_score = ($num_cases > 0)
-        ? $succeeded/($num_cases*1.0)
+    my $succeeded_weight = $expected_total_weight - $found_failed_weight;
+#    my $eval_score = ($num_cases > 0)
+#        ? $succeeded/($num_cases*1.0)
+#        : 0;
+    my $eval_score = ($expected_total_weight > 0)
+        ? $succeeded_weight/($expected_total_weight*1.0)
         : 0;
 
 # FIXME: It might be a good idea to get this working instead of
@@ -847,7 +964,7 @@ show_details = $show_details
     my $allTestsPass = $testsExecuted > 0 && $succeeded == $num_cases;
     my $sectionTitle = "$title ";
 
-    if ($testsExecuted == 0)
+    if ($testsExecuted == 0 or $importError == 1)
     {
         # This used to say "no tests submitted". That might be true, but
         # it is more likely that the student messed up.
@@ -899,6 +1016,7 @@ show_details = $show_details
     $feedbackGenerator->print("Summary: $num_cases case" . $casesPlural
          . " ($failures failure" . $failuresPlural
          . ", $errors error" . $errorsPlural . ")<br>\n" );
+         
 
     # Inform student that hints are being withheld if we are within
     # the extra feedback blackout period. NOTE: because $extraHints is
@@ -1321,6 +1439,139 @@ sub explain_results
     addReportFileWithStyle($cfg, $explain_rpt_relative, 'text/html', 1);
 }
 
+sub show_instructor_output {
+#  TODO add this back in and test it?
+#		separate function?
+#        # Instructor's test output
+#    # -----------
+#    
+#    my $instrOutputText = "";
+#    
+#    $status{'instrTestOutput'}->startFeedbackSection(
+#        "Output Generated by Instructor Tests", ++$expSectionId, 1 );
+#
+#    $status{'instrTestOutput'}->print(<<EOF);
+#<p>The output generated by the instructor tests is shown below.</p>
+#<pre>
+#EOF
+#	# 
+#	#my $instrOutputFileName = "__cout.txt";
+#	
+#	if (open my $outputfh, "<", $instrOutputFileName) {
+#		$instrOutputText = do {
+#	    	local $/ = undef;	    	
+#	    	<$outputfh>;
+#		};
+#		close ( $outputfh );		
+#	};
+#	
+#    $status{'instrTestOutput'}->print( $instrOutputText );
+#    $status{'instrTestOutput'}->print( "</pre>" );
+#
+#    $status{'instrTestOutput'}->endFeedbackSection;
+#
+#	#remove the file
+#	unlink $instrOutputFileName;
+}
+
+
+# TODO handle files in directories recursively
+sub copyfile {
+	my $olddir = shift;
+	my $newdir = shift;
+	
+	my $exts = "(\.png)|(\.jpg)|(\.jpeg)|(\.gif)\$";
+	
+	opendir(DIR, "$olddir");
+	my @files = grep(/$exts/,readdir(DIR));
+	closedir(DIR);
+
+	if (@files > 0) {
+		
+		File::Path::make_path("$newdir");
+		
+		foreach my $file (@files) {
+			chomp $file;
+			my $oldfile = File::Spec->catfile($olddir, $file);	   		
+			my $newfile = File::Spec->catfile($newdir, $file);	
+			File::Copy::copy($oldfile, $newfile);
+			#print("$oldfile $newfile\n");
+		}
+	}
+	
+};
+
+sub show_images {
+	#=============================================================================
+# generate collapsible section for submitted/created images
+#=============================================================================
+
+
+    my $img_rpt_relative      = shift;
+    my $img_rpt               = shift;
+    
+    copyfile($workingDir, $images);
+    
+    
+if (-d $images && scalar <$images/*>)
+{
+#	print("Images");
+	 my $feedbackGenerator = new Web_CAT::FeedbackGenerator($img_rpt);
+    $feedbackGenerator->startFeedbackSection(
+        "Images",
+        ++$expSectionId,
+        1);
+    $feedbackGenerator->print(<<EOF);
+<p>The images below were either submitted with your assignment or generated
+	as part of the grading process.</p>
+<div style="border: 1px solid gray; background-color: white; padding: 1em">
+EOF
+    
+    my $file;
+
+	my @imagesFiles;
+	#File::Find::find (sub {	push(@imagesFiles, $File::Find::name) if -f},
+	# "$images");
+	
+	my %files;
+	my $fileSize;
+
+	File::Find::find (sub {	
+		if (-f) {
+			$fileSize = -s $File::Find::name;
+			if (!$files{"$_-$fileSize"} ) {
+	        	push(@imagesFiles, $File::Find::name);
+				$files{"$_-$fileSize"} = -s $File::Find::name;
+			}		
+		} 
+	}, "$images");
+	
+#	print("@imagesFiles\n");
+    for my $imagesFile (@imagesFiles)
+    {
+    	$imagesFile =~ s/$images\///;
+#    	print("$imagesFile\n");
+        if ($imagesFile !~ /^\..*/)
+        {
+            my $url = "\${publicResourceURL}/images/$imagesFile";
+#            print("$url\n");
+            $feedbackGenerator->print(
+            	"<div><span style=\"margin-right: 1em\">"
+                . "<a href=\"$url\" target=\"_blank\"/>$imagesFile</a>"
+                . "</span>\n"
+                ."<span style=\"margin-right: 1em\">"
+                . " <img src=\"$url\"/></span></div>\n");
+        }
+    }
+
+    $feedbackGenerator->print('</div>');
+    $feedbackGenerator->endFeedbackSection;
+    # Close down this report
+    $feedbackGenerator->close;
+    addReportFileWithStyle($cfg, $img_rpt_relative, 'text/html', 1);
+};
+}
+
 #=============================================================================
 # Phases II and III: Execute the program and produce results
 #=============================================================================
@@ -1413,6 +1664,9 @@ if (!$doStudentTests
         $instr_rpt,
         $instr_rpt_relative,
         1);
+    show_instructor_output(); # fix this
+    show_images($image_rpt_relative, $image_rpt);
+    
     if (!$timeout_occurred)
     {
         $cfg->setProperty("instructorEval", join(" ", @instr_eval));
