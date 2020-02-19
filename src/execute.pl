@@ -23,6 +23,11 @@ use Web_CAT::Utilities
 # PyUnitResultsReader: a hoped-for future development
 #use Web_CAT::PyUnitResultsReader;
 
+use lib dirname(__FILE__) . "/perllib";
+use JSON;
+use Cwd qw(cwd);
+use Data::Dumper;
+
 my @beautifierIgnoreFiles = ();
 
 use File::Spec;
@@ -253,16 +258,16 @@ else
     {
         $ENV{'PATH'} = $cmdPath . ':' . $ENV{'PATH'};
     }
-
     #  Add script home to PYTHONPATH.
     if (! defined($ENV{'PYTHONPATH'}) || $ENV{'PYTHONPATH'} eq "")
     {
-       $ENV{'PYTHONPATH'} = $pluginHome . ":.:src";
+       $ENV{'PYTHONPATH'} = $pluginHome . "/modules:.:src";
     }
     else
     {
-       $ENV{'PYTHONPATH'} = $pluginHome . ":" . $ENV{'PYTHONPATH'} . ":.:src";
+       $ENV{'PYTHONPATH'} = $pluginHome . "/modules:" . $ENV{'PYTHONPATH'} . ":.:src";
     }
+    #$ENV{'PYTHONPATH'} = $pluginHome . "/modules:" . $ENV{'PYTHONPATH'};
     if ($debug)
     {
         print "PYTHON_HOME  = ",
@@ -585,14 +590,75 @@ show_details = $show_details
         #$num_cases++;
         #print "Running the $script script.\n";
 
+        #my $cmdline = "$Web_CAT::Utilities::SHELL"
+        #    . "PYTHONPATH=\"$pluginHome\"/modules "
+        #    . "\"$python_interp\"3 \"$pluginHome\""
+        #    . "/pytest/pytest/pytest.py "
+        #    . "--json=\"$outfile\".json "
+        #    . "\"$script\" > \"$outfile\"  2>&1"; 
+        my $pyinit;
+        my $hasinit = 1;
+        unless (-e "$workingDir/__init__.py"){
+          open($pyinit, ">", "$workingDir/__init__.py") or
+            die "Unable to create __init__.py";
+          close($pyinit);
+          $hasinit = 0;
+        }
         my $cmdline = "$Web_CAT::Utilities::SHELL"
-            . "$python_interp \"$script\" > \"$outfile\"  2>&1";
-
-        print "cmdline = ", $cmdline, "\n" if ($debug);
+            . "$python_interp "
+        #    . "\"$pluginHome\"/modules/printpath.py"
+            . "\"$pluginHome/modules/pylint/lint.py\" "
+        #    . "--trace-config "
+            . "--output-format=json "
+        #    . "\"$script\""
+            . "$workingDir" . " "
+            . "> \"$outfile.json\"  2>&1";
+          
+        print "cmdline = ", $cmdline, "\n";
 
         # Exec program and collect output
         my ($exitcode, $timeout_status) =
             Proc::Background::timeout_system($timeout, $cmdline);
+        unless ($hasinit){
+          unlink "$workingDir/__init__.py";
+        }
+        my $filename = "$outfile.json";
+        my $json_text = do {
+            open(my $json_fh, "<", "$outfile.json")
+                or die("Can't open $outfile.json\n");
+            local $/;
+            <$json_fh>;
+        };
+        my $json = JSON->new;
+        my $json_data = $json->decode($json_text);
+        my %categorized_results;
+        
+        foreach my $val ( @$json_data ) {
+          push @{$categorized_results{ $val->{'type'} }{ $val->{'path'} } }, $val;
+          #print Dumper(\%$val);
+        }
+        open(my $output_file, ">", "$resultDir/testResults.html") 
+          or die("Unable to open $resultDir/testResults");
+        foreach my $key (keys %categorized_results) {
+          print $output_file "<p>\n";
+          print $output_file $key . "\n";
+          foreach my $path ( keys %{$categorized_results{ $key } }) {
+            foreach my $elem ( @{$categorized_results{ $key }{ $path } } ) {
+              print $output_file "<p>".$elem->{'message'}."</p>"."\n";
+            }
+            
+          }
+          print $output_file "</p>";
+        }
+        close($output_file);
+        addReportFileWithStyle($cfg, 'testResults.html', 'text/html', 1);
+        
+        print Dumper(%categorized_results);
+            
+        #$cmdline = "$Web_CAT::Utilities::SHELL"
+        #    . "$python_interp --version 2>&1";
+        #my ($exitcode, $timeout_status) =
+        #    Proc::Background::timeout_system($timeout, $cmdline);
 
         $exitcode = $exitcode>>8;    # Std UNIX exit code extraction.
         # FIXME: Python sets the exit code to 1 if pyunit has any failed cases.
@@ -792,19 +858,25 @@ show_details = $show_details
         elsif (m/^FAILED \(/o)
         {
             # "FAILED (failures=1, errors=2)"
+            if (m/\(failures=([0-9]+), errors=([0-9]+).*\)/o)
+            {
+                $failures += $1;
+                $errors   += $2;
+            }
             # "FAILED (failures=1)"
-            # "FAILED (errors=2)"
-            if (m/failures=([0-9]+)/o)
+            elsif (m/\(failures=([0-9]+)\)/o)
             {
                 $failures += $1;
             }
-            if (m/errors=([0-9]+)/o)
+            # "FAILED (errors=2)"
+            elsif (m/\(errors=([0-9]+)\)/o)
             {
                 $errors   += $1;
             }
-            if (m/skipped=([0-9]+)/o)
+            else
             {
-                $errors   += $1;
+                die "Testing script died: pyunit FAILED. Report format "
+                    . "has changed!";
             }
             $unitTesterOutput .= $_ . "\n";
         }
@@ -1321,6 +1393,10 @@ sub explain_results
     addReportFileWithStyle($cfg, $explain_rpt_relative, 'text/html', 1);
 }
 
+sub run_linter {
+
+}
+
 #=============================================================================
 # Phases II and III: Execute the program and produce results
 #=============================================================================
@@ -1460,6 +1536,8 @@ if ($can_proceed && $doStudentTests)
         $instr_eval[0] * 100.0,
         $maxCorrectnessScore);
 }
+
+# Lint and filter linting results here?
 
 
 #=============================================================================

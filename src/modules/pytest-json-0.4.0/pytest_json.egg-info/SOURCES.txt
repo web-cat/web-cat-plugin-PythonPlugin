@@ -1,0 +1,11 @@
+README.rst
+setup.py
+pytest_json/__init__.py
+pytest_json/plugin.py
+pytest_json/report.py
+pytest_json.egg-info/PKG-INFO
+pytest_json.egg-info/SOURCES.txt
+pytest_json.egg-info/dependency_links.txt
+pytest_json.egg-info/entry_points.txt
+pytest_json.egg-info/requires.txt
+pytest_json.egg-info/top_level.txt
