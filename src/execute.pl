@@ -995,7 +995,12 @@ sub new_run_linter_and_pytest
     my %categorized_results;
     
     foreach my $val ( @$json_data ) {
-      push @{$categorized_results{ $val->{'type'} }{ $val->{'path'} } }, $val;
+      if ( $val->{'type'} eq 'warning' ) {
+        push @{$categorized_results{ 'coding' }{ $val->{'path'} } }, $val;
+      }
+      else {
+        push @{$categorized_results{ 'style' }{ $val->{'path'} } }, $val;
+      }
       #print Dumper(\%$val);
     }
     open(my $output_file, ">", "$resultDir/testResults.html") 
