@@ -997,7 +997,6 @@ sub new_run_linter_and_pytest
     
     foreach my $val ( @$json_data ) {
       my $java_message = map_pylint_to_java_category( $val->{'message-id'} );
-      print $val->{'message-id'};
       if ( $val->{'type'} eq 'warning' ) {
         push @{$categorized_results{ 'coding' }{ $java_message }{ $val->{'path'} } }, $val;
       }
@@ -1038,7 +1037,6 @@ sub new_run_linter_and_pytest
 sub map_pylint_to_java_category
 {
     my $pylint_name = shift;
-    print $pylint_name . '\n';
     my $doc_name = "Documentation";
     my $readability_name = "Readability";
     my $style_name = "Coding Style";
