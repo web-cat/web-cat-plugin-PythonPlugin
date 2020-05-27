@@ -27,6 +27,7 @@ use lib dirname(__FILE__) . "/perllib";
 use JSON;
 use Cwd qw(cwd);
 use Data::Dumper;
+use Switch;
 
 my @beautifierIgnoreFiles = ();
 
@@ -995,11 +996,13 @@ sub new_run_linter_and_pytest
     my %categorized_results;
     
     foreach my $val ( @$json_data ) {
+      my $java_message = map_pylint_to_java_category( $val->{'message-id'} );
+      print $val->{'message-id'};
       if ( $val->{'type'} eq 'warning' ) {
-        push @{$categorized_results{ 'coding' }{ $val->{'path'} } }, $val;
+        push @{$categorized_results{ 'coding' }{ $java_message }{ $val->{'path'} } }, $val;
       }
       else {
-        push @{$categorized_results{ 'style' }{ $val->{'path'} } }, $val;
+        push @{$categorized_results{ 'style' }{ $java_message }{ $val->{'path'} } }, $val;
       }
       #print Dumper(\%$val);
     }
@@ -1008,11 +1011,14 @@ sub new_run_linter_and_pytest
     foreach my $key (keys %categorized_results) {
       print $output_file "<p>\n";
       print $output_file $key . "\n";
-      foreach my $path ( keys %{$categorized_results{ $key } }) {
-        foreach my $elem ( @{$categorized_results{ $key }{ $path } } ) {
-          print $output_file "<p>".$elem->{'message'}."</p>"."\n";
-        }
+      foreach my $type ( keys %{$categorized_results{ $key } }) {
+        print $output_file $type . "\n";
+        foreach my $path ( keys %{$categorized_results{ $key }{ $type } }) {
+          foreach my $elem ( @{$categorized_results{ $key }{ $type }{ $path } } ) {
+            print $output_file "<p>".$elem->{'message'}."</p>"."\n";
+          }
         
+        }
       }
       print $output_file "</p>";
     }
@@ -1027,6 +1033,64 @@ sub new_run_linter_and_pytest
         #    . "/pytest/pytest/pytest.py "
         #    . "--json=\"$outfile\".json "
         #    . "\"$script\" > \"$outfile\"  2>&1"; 
+}
+
+sub map_pylint_to_java_category
+{
+    my $pylint_name = shift;
+    print $pylint_name . '\n';
+    my $doc_name = "Documentation";
+    my $readability_name = "Readability";
+    my $style_name = "Coding Style";
+    my $comp_warning = "Execution Warning";
+    my $potential_bug = "Potential Coding Bug";
+    my $comp_error = "Execution Error";
+    my $unit_test_problem = "Unit Test Coding Problem";
+    switch($pylint_name) {
+      case /C0112/ { return $doc_name; }
+      case /C0113/ { return $readability_name; }
+      case /C0114/ { return $doc_name; }
+      case /C0115/ { return $doc_name; }
+      case /C0116/ { return $doc_name; }
+      case /C0121/ { return $style_name; }
+      case /C0122/ { return $readability_name; }
+      case /C0123/ { return $readability_name; }
+      case /C0144/ { return $readability_name; }
+      case /C02\d\d/ { return $style_name; }
+      case /C03\d\d/ { return $readability_name; }
+      case /C040\d/ { return $doc_name; }
+      case /C041\d/ { return $style_name; }
+      case /C1801/ { return $style_name; }
+      case /R\d\d\d\d/ { return $style_name; }
+      case /W010\d/ { return $comp_warning; }
+      case /W0111/ { return $potential_bug; }
+      case /W012[0-8]/ { return $potential_bug; }
+      case /W0129/ { return $unit_test_problem; }
+      case /W0143/ { return $potential_bug; }
+      case /W0150/ { return $potential_bug; }
+      case /W0199/ { return $unit_test_problem; }
+      case /W0201/ { return $comp_error; }
+      case /W0211/ { return $comp_error; }
+      case /W0212/ { return $comp_error; }
+      case /W0222/ { return $comp_error; }
+      case /W0223/ { return $comp_error; }
+      case /W023\d/ { return $comp_warning; }
+      case /W03\d\d/ { return $comp_error; }
+      case /W04\d\d/ { return $comp_warning; }
+      case /W05\d\d/ { return $comp_warning; }
+      case /W06\d\d/ { return $comp_warning; }
+      case /W07\d\d/ { return $comp_warning; }
+      case /W11\d\d/ { return $comp_error; }
+      case /W12\d\d/ { return $comp_warning; }
+      case /W13\d\d/ { return $comp_error; }
+      case /W14\d\d/ { return $comp_warning; }
+      case /W1501/ { return $comp_error; }
+      case /W1503/ { return $unit_test_problem; }
+      case /W150[4-9]/ { return $comp_error; }
+      case /W1510/ { return $comp_warning; }
+      case /W16\d\d/ { return $comp_warning; }
+      else { return "Unknown"; }
+    }
 }
 
 
