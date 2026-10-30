@@ -1,0 +1,2 @@
+Defaults:instructor user_command_timeouts
+instructor ALL=(student) NOPASSWD: /plugin/student_code
